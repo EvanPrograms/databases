@@ -10,3 +10,11 @@ postgres(# url text NOT NULL,
 postgres(# title text NOT NULL,
 postgres(# likes integer DEFAULT 0
 postgres(# );
+
+CREATE TABLE blogs (
+id SERIAL PRIMARY KEY,
+author text,
+url text NOT NULL,
+title text NOT NULL,
+likes integer DEFAULT 0
+);
