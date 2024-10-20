@@ -1,15 +1,36 @@
 const router = require('express').Router()
 
-const { Note } = require('../models')
+const { Note, User } = require('../models')
+
+const tokenExtractor = (req, res, next) => {
+  const authorization = req.get('authorization')
+  if (authorization && authorization.toLowerCase().startsWith('bearer ')) {
+    try {
+      req.decodedToken = jwt.verify(authorization.substring(7), SECRET)
+    } catch{
+      return res.status(401).json({ error: 'token invalid' })
+    }
+  }  else {
+    return res.status(401).json({ error: 'token missing' })
+  }
+  next()
+}
 
 router.get('/', async (req, res) => {
-  const notes = await Note.findAll()
+  const notes = await Note.findAll({
+    attributes: { exclude: ['userId']},
+    include: {
+      model: User,
+      attributes: ['name']
+    }
+  })
   res.json(notes)
 })
 
-router.post('/', async (req, res) => {
+router.post('/', tokenExtractor, async (req, res) => {
   try {
-    const note = await Note.create(req.body)
+    const user = await User.findByPk(req.decodedToken.id)
+    const note = await Note.create({...req.body, userId: user.id, date: new Date()})
     res.json(note)
   } catch(error) {
     return res.status(400).json({ error })
