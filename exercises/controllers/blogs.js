@@ -30,8 +30,18 @@ const errorHandler = (error, req, res, next) => {
   return res.status(500).json({ error: 'An unexpected error occurred' });
 };
 
+const blogFinder = async (req, res, next) => {
+  req.blog = await Blog.findByPk(req.params.id)
+  next()
+}
+
 router.get('/', async (req, res) => {
-  const blogs = await Blog.findAll()
+  const blogs = await Blog.findAll({
+    include: {
+      model: User,
+      attributes: ['name']
+    }
+  })
   res.json(blogs)
 })
 
@@ -45,10 +55,26 @@ router.post('/', tokenExtractor, async (req, res, next) => {
   }
 })
 
-const blogFinder = async (req, res, next) => {
-  req.blog = await Blog.findByPk(req.params.id)
-  next()
-}
+router.delete('/:id', tokenExtractor, blogFinder, async (req, res) => {
+  try { 
+    if (!req.blog) {
+      return res.status(404).json({ error: "blog not found" })
+    }
+
+    console.log('User ID from token:', req.decodedToken.id);
+    console.log('Blog user ID:', req.blog.userId);
+
+    if (req.blog.userId !== req.decodedToken.id) {
+      return res.status(403).json({ error: "Only the creator can delete this blog" })
+    }
+
+    await req.blog.destroy()
+    res.status(204).end()
+  } catch (error) {
+    console.error(error.message)
+    res.status(500).json({ error: "an error occurred while deleting the blog" })
+  }
+})
 
 router.get('/:id', blogFinder, async (req, res) => {
   if (req.blog) {
@@ -56,13 +82,6 @@ router.get('/:id', blogFinder, async (req, res) => {
   } else {
     res.status(404).end()
   }
-})
-
-router.delete('/:id', blogFinder, async (req, res) => {
-  if (req.blog) {
-    await req.blog.destroy()
-  }
-  res.status(204).end()
 })
 
 router.put('/:id', blogFinder, async (req, res, next) => {
