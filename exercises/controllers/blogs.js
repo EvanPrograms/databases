@@ -25,7 +25,7 @@ const errorHandler = (error, req, res, next) => {
 
   // Handle specific errors
   if (error.name === 'SequelizeValidationError') {
-    return res.status(400).json({ error: 'Validation error' });
+    return res.status(400).json({ error: error.errors.map(e => e.message) });
   }
 
   // Other potential errors
