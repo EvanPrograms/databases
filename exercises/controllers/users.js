@@ -45,7 +45,7 @@ router.get('/:id', errorHandler, async (req, res, next) => {
           as: 'UserReadingList',
           attributes: { exclude: ['createdAt', 'updatedAt', 'userId']},
           through: {
-            attributes: []
+            attributes: ['read', 'id']
           }
         }
       ]
@@ -63,19 +63,6 @@ router.get('/:id', errorHandler, async (req, res, next) => {
   } catch (error) {
     next(error)
   }
-
-  // const user = await User.findByPk(req.params.id)
-  // if (user) {
-  //   res.json(user)
-  // // if (user) {
-  // //   res.json({
-  // //     username: user.username,
-  // //     name: user.name,
-  // //     readings:
-  // //   })
-  // } else {
-  //   res.status(404).end()
-  // }
 })
 
 router.post('/', async (req, res, next) => {
