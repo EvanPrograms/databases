@@ -2,7 +2,7 @@ const router = require('express').Router()
 const jwt = require('jsonwebtoken')
 const { SECRET } = require('../util/config')
 
-const { Blog, User } = require('../models')
+const { Blog, User, ReadingList } = require('../models')
 
 const { Op } = require('sequelize')
 
@@ -69,6 +69,35 @@ router.post('/', tokenExtractor, async (req, res, next) => {
     next(error)
   }
 })
+
+router.post('/reading-list', tokenExtractor, async (req, res, next) => {
+  const { blogId } = req.body
+
+  try {
+    const user = await User.findByPk(req.decodedToken.id)
+    const readingListEntry = await ReadingList.create({ userId: user.id, blogId })
+    res.status(201).json(readingListEntry)
+  } catch(error) {
+    next(error)
+  }
+})
+
+router.put('/reading-list/:id', tokenExtractor, async (req, res, next) => {
+  const { id } = req.params; // Expecting the entry ID in the URL
+
+  try {
+    const entry = await ReadingList.findByPk(id);
+    if (entry) {
+      entry.read = true; // Mark as read
+      await entry.save();
+      res.status(200).json(entry);
+    } else {
+      res.status(404).json({ error: 'Entry not found' });
+    }
+  } catch (error) {
+    next(error);
+  }
+});
 
 router.delete('/:id', tokenExtractor, blogFinder, async (req, res) => {
   try { 

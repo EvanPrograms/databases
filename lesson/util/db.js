@@ -3,12 +3,12 @@ const { DATABASE_URL } = require('./config')
 const { Umzug, SequelizeStorage } = require('umzug')
 
 const sequelize = new Sequelize(DATABASE_URL, {
-  dialectOptions: {
-    ssl: {
-      require: true,
-      rejectUnauthorized: false
-    }
-  },
+  // dialectOptions: {
+  //   ssl: {
+  //     require: true,
+  //     rejectUnauthorized: false
+  //   }
+  // },
 });
 
 const connectToDatabase = async () => {
@@ -17,7 +17,7 @@ const connectToDatabase = async () => {
     await runMigrations()
     console.log('connected to the database')
   } catch (err) {
-    console.log('failed to connect to the database')
+    console.log('failed to connect to the database', err.message || err)
     return process.exit(1)
   }
 

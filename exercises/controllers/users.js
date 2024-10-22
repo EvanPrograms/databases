@@ -1,6 +1,6 @@
 const router = require('express').Router()
 
-const { User, Blog } = require('../models')
+const { User, Blog, ReadingList } = require('../models')
 
 const errorHandler = (error, req, res, next) => {
   console.error(error.message);
@@ -17,11 +17,65 @@ const errorHandler = (error, req, res, next) => {
 
 router.get('/', async (req, res) => {
   const users = await User.findAll({
-    include: {
+    include: [
+      {
       model: Blog
-    }
+      },
+      // {
+      //   model: ReadingList,
+      //   as: 'readingLists',
+      //   through: {
+      //     attributes: ['user_id', 'blog_id']
+      //   }
+      // }
+    ]
   })
   res.json(users)
+})
+
+router.get('/:id', errorHandler, async (req, res, next) => {
+  try {
+    const userId = req.params.id
+
+    const user = await User.findOne({
+      where: { id: userId },
+      include: [
+        {
+          model: Blog,
+          as: 'UserReadingList',
+          attributes: { exclude: ['createdAt', 'updatedAt', 'userId']},
+          through: {
+            attributes: []
+          }
+        }
+      ]
+    })
+
+    if (!user) {
+      return res.status(404).json({ error: "user not found"})
+    }
+
+    res.json({
+      name: user.name,
+      username: user.username,
+      readings: user.UserReadingList
+    })
+  } catch (error) {
+    next(error)
+  }
+
+  // const user = await User.findByPk(req.params.id)
+  // if (user) {
+  //   res.json(user)
+  // // if (user) {
+  // //   res.json({
+  // //     username: user.username,
+  // //     name: user.name,
+  // //     readings:
+  // //   })
+  // } else {
+  //   res.status(404).end()
+  // }
 })
 
 router.post('/', async (req, res, next) => {
@@ -51,14 +105,7 @@ router.put('/:username', async (req, res) => {
   }
 })
 
-// router.get('/:id', async (req, res) => {
-//   const user = await User.findByPk(req.params.id)
-//   if (user) {
-//     res.json(user)
-//   } else {
-//     res.status(404).end()
-//   }
-// })
+
 
 router.use(errorHandler)
 
