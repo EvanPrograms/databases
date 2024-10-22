@@ -38,8 +38,6 @@ const blogFinder = async (req, res, next) => {
 }
 
 router.post('/', tokenExtractor, async (req, res, next) => {
-
-
   try {
     const user = await User.findByPk(req.decodedToken.id)
     const blog = await Blog.findByPk(req.body.blogId)
@@ -61,6 +59,31 @@ router.post('/', tokenExtractor, async (req, res, next) => {
   } catch(error) {
     next(error)
   }
+})
+
+router.put('/:id', tokenExtractor, async (req, res, next) => {
+    const user = await User.findByPk(req.decodedToken.id)
+    const entry = await ReadingList.findByPk(req.params.id)
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (!entry) {
+      return res.status(404).json({ error: 'Blog not found' });
+    }
+
+    if (entry.userId !== user.id) {
+      return res.status(403).json({ error: 'You can only mark blogs in your own reading list as read' });
+    }
+
+    try {
+      entry.read = req.body.read
+      await entry.save()
+      res.json(entry)
+    } catch (error) {
+      next(error)
+      }
 })
 
 router.use(errorHandler)
