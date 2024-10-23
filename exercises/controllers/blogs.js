@@ -3,21 +3,28 @@ const jwt = require('jsonwebtoken')
 const { SECRET } = require('../util/config')
 
 const { Blog, User, ReadingList } = require('../models')
+const ActiveSession = require('../models/activeSession')
 
 const { Op } = require('sequelize')
 
-const tokenExtractor = (req, res, next) => {
+const tokenExtractor = async (req, res, next) => {
   const authorization = req.get('authorization')
   if (authorization && authorization.toLowerCase().startsWith('bearer ')) {
     try {
-      req.decodedToken = jwt.verify(authorization.substring(7), SECRET)
-    } catch{
-      return res.status(401).json({ error: 'token invalid' })
+      const token = authorization.substring(7)
+      req.decodedToken = jwt.verify(token, SECRET)
+
+      const session = await ActiveSession.findOne({ where: { token }})
+      if (!session) {
+        return res.status(401).json({ error: 'Session expired or invalid'})
+      }
+      next()
+    } catch (error) {
+      return res.status(401).json({ error: 'Token Invalid' })
     }
   }  else {
     return res.status(401).json({ error: 'token missing' })
   }
-  next()
 }
 
 const errorHandler = (error, req, res, next) => {
@@ -70,35 +77,6 @@ router.post('/', tokenExtractor, async (req, res, next) => {
   }
 })
 
-// router.post('/reading-list', tokenExtractor, async (req, res, next) => {
-//   const { blogId } = req.body
-
-//   try {
-//     const user = await User.findByPk(req.decodedToken.id)
-//     const readingListEntry = await ReadingList.create({ userId: user.id, blogId })
-//     res.status(201).json(readingListEntry)
-//   } catch(error) {
-//     next(error)
-//   }
-// })
-
-// router.put('/reading-list/:id', tokenExtractor, async (req, res, next) => {
-//   const { id } = req.params; // Expecting the entry ID in the URL
-
-//   try {
-//     const entry = await ReadingList.findByPk(id);
-//     if (entry) {
-//       entry.read = true; // Mark as read
-//       await entry.save();
-//       res.status(200).json(entry);
-//     } else {
-//       res.status(404).json({ error: 'Entry not found' });
-//     }
-//   } catch (error) {
-//     next(error);
-//   }
-// });
-
 router.delete('/:id', tokenExtractor, blogFinder, async (req, res) => {
   try { 
     if (!req.blog) {
@@ -128,7 +106,7 @@ router.get('/:id', blogFinder, async (req, res) => {
   }
 })
 
-router.put('/:id', blogFinder, async (req, res, next) => {
+router.put('/:id', tokenExtractor, blogFinder, async (req, res, next) => {
   try {
     req.blog.likes = req.body.likes
     await req.blog.save()

@@ -15,6 +15,26 @@ const errorHandler = (error, req, res, next) => {
   return res.status(500).json({ error: error.message });
 };
 
+const tokenExtractor = async (req, res, next) => {
+  const authorization = req.get('authorization')
+  if (authorization && authorization.toLowerCase().startsWith('bearer ')) {
+    try {
+      const token = authorization.substring(7)
+      req.decodedToken = jwt.verify(token, SECRET)
+
+      const session = await ActiveSession.findOne({ where: { token }})
+      if (!session) {
+        return res.status(401).json({ error: 'Session expired or invalid'})
+      }
+      next()
+    } catch (error) {
+      return res.status(401).json({ error: 'Token Invalid' })
+    }
+  }  else {
+    return res.status(401).json({ error: 'token missing' })
+  }
+}
+
 router.get('/', async (req, res) => {
   const users = await User.findAll({
     include: [
@@ -86,7 +106,7 @@ router.post('/', async (req, res, next) => {
   }
 })
 
-router.put('/:username', async (req, res) => {
+router.put('/:username', tokenExtractor, async (req, res) => {
   try {
     const { username } = req.params
     const { newUsername } = req.body
@@ -102,8 +122,6 @@ router.put('/:username', async (req, res) => {
     return res.status(400).json({ error: 'Failed to update username'})
   }
 })
-
-
 
 router.use(errorHandler)
 

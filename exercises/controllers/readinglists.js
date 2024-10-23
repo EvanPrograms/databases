@@ -6,18 +6,24 @@ const { Blog, User, ReadingList } = require('../models')
 
 const { Op } = require('sequelize')
 
-const tokenExtractor = (req, res, next) => {
+const tokenExtractor = async (req, res, next) => {
   const authorization = req.get('authorization')
   if (authorization && authorization.toLowerCase().startsWith('bearer ')) {
     try {
-      req.decodedToken = jwt.verify(authorization.substring(7), SECRET)
-    } catch{
-      return res.status(401).json({ error: 'token invalid' })
+      const token = authorization.substring(7)
+      req.decodedToken = jwt.verify(token, SECRET)
+
+      const session = await ActiveSession.findOne({ where: { token }})
+      if (!session) {
+        return res.status(401).json({ error: 'Session expired or invalid'})
+      }
+      next()
+    } catch (error) {
+      return res.status(401).json({ error: 'Token Invalid' })
     }
   }  else {
     return res.status(401).json({ error: 'token missing' })
   }
-  next()
 }
 
 const errorHandler = (error, req, res, next) => {
