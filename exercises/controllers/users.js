@@ -37,6 +37,13 @@ router.get('/:id', errorHandler, async (req, res, next) => {
   try {
     const userId = req.params.id
 
+    let readFilter = {}
+    if (req.query.read === 'true') {
+      readFilter.read = true
+    } else if (req.query.read === 'false') {
+      readFilter.read = false
+    }
+
     const user = await User.findOne({
       where: { id: userId },
       include: [
@@ -45,10 +52,14 @@ router.get('/:id', errorHandler, async (req, res, next) => {
           as: 'UserReadingList',
           attributes: { exclude: ['createdAt', 'updatedAt', 'userId']},
           through: {
-            attributes: ['read', 'id']
+            attributes: ['read', 'id'],
+            where: readFilter
           }
         }
-      ]
+      ],
+      // where: {
+      //   read: req.query.read === 'true'
+      // }
     })
 
     if (!user) {
